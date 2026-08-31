@@ -10,6 +10,7 @@ import time
 import aiohttp
 import io
 import random
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.INFO,
@@ -2272,59 +2273,150 @@ class HubCog(commands.Cog):
             )
         return embed, view
 
-    @commands.command(name="hub")
-    async def txt_hub(self, ctx: commands.Context):
-        embed, view = await self.get_hub_components(ctx)
-        await ctx.send(embed=embed, view=view)
-
     @commands.command(name="help")
     async def txt_help(self, ctx: commands.Context):
-        banner_path = os.path.join(BANNERS_DIR, "serverbanner.png")
+        """Показать красивое меню помощи"""
+        
+        # Проверяем наличие баннера
+        banner_path = os.path.join(BANNERS_DIR, "banner.png")
         banner_file = None
         banner_url = None
+        
         if os.path.exists(banner_path):
-            banner_file = disnake.File(banner_path, filename="serverbanner.png")
-            banner_url = f"attachment://serverbanner.png"
-
-        components = [
-            ui.TextDisplay(content="## 📖 Доступные команды\nВыберите категорию, чтобы увидеть список команд.")
+            banner_file = disnake.File(banner_path, filename="banner.png")
+            banner_url = "attachment://banner.png"
+        
+        # Создаём компоненты
+        components = []
+        
+        # Заголовок
+        components.append(
+            ui.TextDisplay(
+                content=(
+                    "<a:zzz_voskl:1530628292342972536> **ЦЕНТР ПОМОЩИ**\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    "<a:imsv_BongoCat:1258500185089249411> **Добро пожаловать в центр помощи!**\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    "📌 **Выберите категорию ниже:**\n"
+                    "Нажмите на кнопку с нужным разделом,\n"
+                    "чтобы увидеть список доступных команд."
+                )
+            )
+        )
+        
+        # Категории с описанием и кнопкой
+        categories = [
+            {
+                "id": "help_cat_main",
+                "emoji": "🏠",
+                "name": "ГЛАВНЫЕ",
+                "description": "Основные команды бота: хаб, профиль, настройки",
+                "example": "i.hub, i.profile",
+                "style": disnake.ButtonStyle.success
+            },
+            {
+                "id": "help_cat_ranks",
+                "emoji": "📊",
+                "name": "РАНГИ",
+                "description": "Ранговая система, уровни и таблица лидеров",
+                "example": "i.lvl, i.top",
+                "style": disnake.ButtonStyle.primary
+            },
+            {
+                "id": "help_cat_mod",
+                "emoji": "🛡️",
+                "name": "МОДЕРАЦИЯ",
+                "description": "Инструменты для модерации сервера",
+                "example": "i.modrole_set, i.xp-add",
+                "style": disnake.ButtonStyle.danger
+            },
+            {
+                "id": "help_cat_clans",
+                "emoji": "🏰",
+                "name": "КЛАНЫ",
+                "description": "Клановая система: создание, управление, битвы",
+                "example": "i.req, i.invite",
+                "style": disnake.ButtonStyle.blurple
+            },
+            {
+                "id": "help_cat_love",
+                "emoji": "💖",
+                "name": "РОМАНТИКА",
+                "description": "Браки, отношения, романтические команды",
+                "example": "i.marry, i.hug",
+                "style": disnake.ButtonStyle.secondary
+            },
+            {
+                "id": "help_cat_ent",
+                "emoji": "🎮",
+                "name": "РАЗВЛЕЧЕНИЯ",
+                "description": "Игры, развлечения и клонирование эмодзи",
+                "example": "i.clone-emoji, i.family",
+                "style": disnake.ButtonStyle.primary
+            },
+            {
+                "id": "help_cat_voice",
+                "emoji": "🎙️",
+                "name": "ГОЛОСОВЫЕ КАНАЛЫ",
+                "description": "Управление голосовыми каналами и связями",
+                "example": "i.voice-link, i.room-name",
+                "style": disnake.ButtonStyle.blurple
+            }
         ]
-        for cat, commands_list in self.help_categories.items():
+        
+        # Добавляем каждую категорию как отдельный блок
+        for cat in categories:
             components.append(
                 ui.Section(
                     ui.TextDisplay(
                         content=(
-                            f"🎮 {cat}" if cat == "ГЛАВНЫЕ" else
-                            f"📊 {cat}" if cat == "РАНГИ" else
-                            f"🛡️ {cat}" if cat == "МОДЕРАЦИЯ" else
-                            f"🏰 {cat}" if cat == "КЛАНЫ" else
-                            f"🎭 {cat}"
+                            f"{cat['emoji']} **{cat['name']}**\n"
+                            f"└─ {cat['description']}\n"
+                            f"└─ *Примеры: {cat['example']}*"
                         )
                     ),
                     accessory=ui.Button(
-                        label="Показать",
-                        custom_id=f"help_{cat}",
-                        style=disnake.ButtonStyle.secondary
+                        label="➡️ Перейти",
+                        custom_id=cat['id'],
+                        style=cat['style']
                     )
                 )
             )
-
+        
+        # Баннер внизу (как вы хотели)
         if banner_url:
             components.append(
                 ui.MediaGallery(
                     disnake.MediaGalleryItem(media=banner_url)
                 )
             )
-
+        
+        # Кнопка закрытия
+        components.append(
+            ui.Section(
+                ui.TextDisplay(content="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"),
+                accessory=ui.Button(
+                    label="❌ Закрыть",
+                    custom_id="help_close",
+                    style=disnake.ButtonStyle.danger
+                )
+            )
+        )
+        
+        # Создаём Container
         container = ui.Container(
             *components,
-            accent_colour=disnake.Colour.blue()
+            accent_colour=disnake.Colour.from_rgb(255, 105, 180)
         )
-
+        
+        # Отправляем
         if banner_file:
             await ctx.send(components=[container], file=banner_file)
         else:
             await ctx.send(components=[container])
+
+
+
 
     @commands.command(name="profile")
     async def txt_profile(self, ctx: commands.Context, member: disnake.Member = None):
@@ -2360,32 +2452,29 @@ class HubCog(commands.Cog):
             cid = inter.values[0]
         else:
             cid = inter.component.custom_id
+        
         logger.info(f"🔘 Нажата кнопка/выбран пункт: {cid}")
-
+        
         try:
+            # ===== ОБРАБОТКА HELP КНОПОК =====
+            if cid.startswith("help_cat_"):
+                await self.show_category_commands(inter, cid)
+                return
+            
+            if cid == "help_close":
+                await inter.response.edit_message(
+                    content="❌ Меню помощи закрыто.",
+                    components=None
+                )
+                return
+            
+            if cid == "help_back":
+                await self.show_help_main(inter)
+                return
+            
+            # ===== ОСТАЛЬНЫЕ КНОПКИ =====
             if cid == "hub_back":
                 embed, view = await self.get_hub_components(inter)
-                await inter.response.edit_message(embed=embed, view=view)
-                return
-
-            if cid == "help_back":
-                embed = disnake.Embed(
-                    title="📖 Доступные команды",
-                    description="Выберите категорию в меню ниже.",
-                    color=disnake.Color.blue()
-                )
-                view = disnake.ui.View()
-                select = disnake.ui.Select(
-                    placeholder="Выберите категорию...",
-                    options=[
-                        disnake.SelectOption(label="🎮 Главные", value="help_main"),
-                        disnake.SelectOption(label="📊 Ранги", value="help_ranks"),
-                        disnake.SelectOption(label="🛡️ Модерация", value="help_mod"),
-                        disnake.SelectOption(label="🏰 Кланы", value="help_clans"),
-                        disnake.SelectOption(label="🎭 Развлечения", value="help_entertainment"),
-                    ]
-                )
-                view.add_item(select)
                 await inter.response.edit_message(embed=embed, view=view)
                 return
 
@@ -2423,13 +2512,6 @@ class HubCog(commands.Cog):
                 view = ModCategoryControlViewOld(self.bot, inter.author.id)
                 await inter.response.edit_message(embed=embed, view=view)
 
-            elif cid.startswith("help_"):
-                category = cid.replace("help_", "")
-                commands_list = self.help_categories.get(category, ["Нет команд в этой категории."])
-                text = "\n".join(commands_list)
-                embed = disnake.Embed(title=f"📂 {category}", description=text, color=disnake.Color.green())
-                await inter.followup.send(embed=embed, ephemeral=True)
-
             elif cid.startswith("clan_go_"):
                 clan_id = int(cid.replace("clan_go_", ""))
                 view = ClanPageView(self.bot, inter.author.id, inter.guild, clan_id)
@@ -2449,340 +2531,234 @@ class HubCog(commands.Cog):
             except Exception as e2:
                 logger.error(f"Не удалось отправить сообщение об ошибке: {e2}")
 
-    async def get_profile_container(self, user: disnake.Member, guild: disnake.Guild, current_user_id: int):
-        async with self.bot.db.execute(
-            "SELECT embed_color, status_text, banner_url FROM profiles WHERE user_id = ?",
-            (user.id,)
-        ) as cursor:
-            row = await cursor.fetchone()
-        async with self.bot.db.execute(
-            "SELECT xp, voice_xp FROM levels WHERE user_id = ?",
-            (user.id,)
-        ) as cursor:
-            lvl_row = await cursor.fetchone()
 
-        emb, st, bn = (row[0], row[1], row[2]) if row else ("#7289da", "Участник сервера", "")
-        txp, vxp = (lvl_row[0], lvl_row[1]) if lvl_row else (0, 0)
-
-        text_lvl, text_cxp, text_nxp = calculate_lvl_and_remaining(txp)
-        voice_lvl, voice_cxp, voice_nxp = calculate_lvl_and_remaining(vxp)
-
-        text_bar = generate_custom_progress_bar(text_cxp, text_nxp)
-        voice_bar = generate_custom_progress_bar(voice_cxp, voice_nxp)
-
-        try:
-            col = disnake.Color(int(emb.lstrip("#"), 16))
-        except Exception:
-            col = disnake.Color.blue()
-
-        clan_tag_suffix = ""
-        clan_position = None
-        clan_level = None
-        clan_name_display = None
-        clan_member_count = 0
-        clan_id = await self.bot.get_user_clan(user.id)
-        if clan_id:
-            clan = await self.bot.get_clan(clan_id)
-            if clan:
-                clan_name_display = format_clan_name(clan[1], clan[11] or "")
-                clan_tag_suffix = f"《{clan[11]}》" if clan[11] else ""
-                clan_level, _, _ = calculate_lvl_and_remaining(clan[8])
-                clan_member_count = await self.bot.get_clan_member_count(clan_id)
-                async with self.bot.db.execute(
-                    "SELECT COUNT(*) FROM clans WHERE guild_id = ? AND xp > ?",
-                    (guild.id, clan[8])
-                ) as cur:
-                    pos_row = await cur.fetchone()
-                    clan_position = (pos_row[0] if pos_row else 0) + 1
-
-        async with self.bot.db.execute(
-            "SELECT COUNT(*) FROM message_logs WHERE user_id = ?",
-            (user.id,)
-        ) as cursor:
-            total_msgs_row = await cursor.fetchone()
-        total_msgs = total_msgs_row[0] if total_msgs_row else 0
-
-        user_role_ids = await self.bot.get_linked_roles(user.id)
-        roles_text = ", ".join(
-            f"<@&{r_id[0]}>" for r_id in user_role_ids
-        ) if user_role_ids else "Нет личных ролей"
-
-        attached_file = None
-        gif_path = os.path.join(BANNERS_DIR, f"{user.id}.gif")
-        png_path = os.path.join(BANNERS_DIR, f"{user.id}.png")
-        if os.path.exists(gif_path):
-            active_path = gif_path
-            filename_banner = f"profile_banner_{user.id}.gif"
-        elif os.path.exists(png_path):
-            active_path = png_path
-            filename_banner = f"profile_banner_{user.id}.png"
-        else:
-            active_path = None
-
+    async def show_category_commands(self, inter: disnake.MessageInteraction, category_id: str):
+        """Показать команды выбранной категории"""
+        
+        help_categories = {
+            "help_cat_main": {
+                "emoji": "🏠",
+                "name": "ГЛАВНЫЕ",
+                "commands": [
+                    ("🔄", "i.hub", "Открыть центральный хаб - главное меню бота"),
+                    ("📖", "i.help", "Показать это меню помощи"),
+                    ("👤", "i.profile [@user]", "Показать профиль участника"),
+                    ("✏️", "i.profile-edit", "Изменить описание и баннер профиля"),
+                ]
+            },
+            "help_cat_ranks": {
+                "emoji": "📊",
+                "name": "РАНГИ",
+                "commands": [
+                    ("⭐", "i.lvl [@user]", "Показать ранговую карточку участника"),
+                    ("🏆", "i.top", "Таблица лидеров сервера по XP"),
+                ]
+            },
+            "help_cat_mod": {
+                "emoji": "🛡️",
+                "name": "МОДЕРАЦИЯ",
+                "commands": [
+                    ("🔧", "i.modrole_set", "Назначить роль для модерации"),
+                    ("⬆️", "i.lvl-set", "Установить уровень участнику"),
+                    ("➕", "i.xp-add", "Начислить XP участнику"),
+                ]
+            },
+            "help_cat_clans": {
+                "emoji": "🏰",
+                "name": "КЛАНЫ",
+                "commands": [
+                    ("📩", "i.req", "Подать заявку на вступление в клан"),
+                    ("✅", "i.accept", "Принять заявку в клан"),
+                    ("❌", "i.decline", "Отклонить заявку в клан"),
+                    ("📨", "i.invite", "Пригласить участника в клан"),
+                    ("💰", "i.clan-money-set", "Установить монеты клана"),
+                    ("➕", "i.clan-money-add", "Добавить монеты клану"),
+                ]
+            },
+            "help_cat_love": {
+                "emoji": "💖",
+                "name": "РОМАНТИКА",
+                "commands": [
+                    ("💍", "i.marry", "Сделать предложение руки и сердца"),
+                    ("💔", "i.divorce", "Расторгнуть брак"),
+                    ("💞", "i.love-profile", "Показать карточку брака"),
+                    ("💬", "i.love-status", "Установить статус отношений"),
+                    ("🤗", "i.hug", "Отправить объятие участнику"),
+                    ("😘", "i.kiss", "Отправить поцелуй участнику"),
+                ]
+            },
+            "help_cat_ent": {
+                "emoji": "🎮",
+                "name": "РАЗВЛЕЧЕНИЯ",
+                "commands": [
+                    ("🎭", "i.clone-emoji", "Клонировать эмодзи на сервер"),
+                    ("🌳", "i.family", "Семейное древо (в разработке)"),
+                ]
+            },
+            "help_cat_voice": {
+                "emoji": "🎙️",
+                "name": "ГОЛОСОВЫЕ КАНАЛЫ",
+                "commands": [
+                    ("🔗", "i.voice-link", "Привязать пользователя к каналу"),
+                    ("🔓", "i.voice-unlink", "Удалить привязку канала"),
+                    ("🏠", "i.room-name", "Изменить название свадебного канала"),
+                    ("👥", "i.room-limit", "Установить лимит участников"),
+                    ("🔑", "i.room-access", "Выдать доступ к комнате"),
+                ]
+            }
+        }
+        
+        category_data = help_categories.get(category_id)
+        if not category_data:
+            return await inter.response.send_message("❌ Категория не найдена.", ephemeral=True)
+        
+        # Создаём компоненты
         components = []
-
-        components.append(
-            ui.TextDisplay(content=f"## 👤 Профиль — {user.name}{clan_tag_suffix}")
-        )
-
+        
+        # Заголовок категории
         components.append(
             ui.TextDisplay(
                 content=(
-                    f"<a:imsv_bc_hatory_work:1257845094535532604> **Текстовый ранг:** Уровень `{text_lvl}`\n"
-                    f"{text_bar}\n`{text_cxp} / {text_nxp}` XP\n\n"
-                    f"<a:imsv_butterfly:1526225899995922514> **Голосовой ранг:** Уровень `{voice_lvl}`\n"
-                    f"{voice_bar}\n`{voice_cxp} / {voice_nxp}` XP\n\n"
-                    f"📊 **Всего сообщений:** {total_msgs}"
+                    f"{category_data['emoji']} **{category_data['name']}**\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 )
             )
         )
-
+        
+        # Список команд с описанием
+        for emoji, command, description in category_data['commands']:
+            components.append(
+                ui.TextDisplay(
+                    content=f"{emoji} **{command}**\n└─ {description}"
+                )
+            )
+        
+        # Кнопки навигации
         components.append(
             ui.Section(
-                ui.TextDisplay(
-                    content=(
-                        f"📅 **Заход на сервер**\n<t:{int(user.joined_at.timestamp())}:R>\n\n"
-                        f"📝 **Статус**\n{st}\n\n"
-                        f"🏷️ **Ролей:** {len(user_role_ids)}"
-                    )
-                ),
-                accessory=ui.Thumbnail(
-                    media=user.display_avatar.url,
-                    description="Аватар"
+                ui.TextDisplay(content="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"),
+                accessory=ui.Button(
+                    label="⬅️ Назад к категориям",
+                    custom_id="help_back",
+                    style=disnake.ButtonStyle.secondary
                 )
             )
         )
-
-        if user_role_ids:
-            components.append(
-                ui.TextDisplay(
-                    content=f"🎭 **Привязанные роли**\n{roles_text}"
+        
+        components.append(
+            ui.Section(
+                ui.TextDisplay(content=""),
+                accessory=ui.Button(
+                    label="❌ Закрыть",
+                    custom_id="help_close",
+                    style=disnake.ButtonStyle.danger
                 )
             )
+        )
+        
+        # Создаём Container
+        container = ui.Container(
+            *components,
+            accent_colour=disnake.Colour.from_rgb(100, 149, 237)
+        )
+        
+        await inter.response.edit_message(components=[container])
 
+
+    async def show_help_main(self, inter: disnake.MessageInteraction):
+        """Показать главное меню помощи"""
+        
+        banner_path = os.path.join(BANNERS_DIR, "banner.png")
+        banner_file = None
+        banner_url = None
+        
+        if os.path.exists(banner_path):
+            banner_file = disnake.File(banner_path, filename="banner.png")
+            banner_url = "attachment://banner.png"
+        
+        components = []
+        
         components.append(
             ui.TextDisplay(
-                content="‿︵‿︵‿︵‿︵‿୨♡୧‿︵‿︵‿︵‿︵‿\n**ДАННЫЕ КЛАНА**"
+                content=(
+                    "<a:zzz_voskl:1530628292342972536> **ЦЕНТР ПОМОЩИ**\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    "<a:imsv_BongoCat:1258500185089249411> **Добро пожаловать в центр помощи!**\n"
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    "📌 **Выберите категорию ниже:**\n"
+                    "Нажмите на кнопку с нужным разделом,\n"
+                    "чтобы увидеть список доступных команд.\n\n"
+                    "💡 **Совет:** Используйте `i.hub` для быстрого\n"
+                    "доступа к основному функционалу бота."
+                )
             )
         )
-
-        if clan_id and clan:
-            clan_info = (
-                f"**{clan_name_display}**\n"
-                f"📊 Уровень: `{clan_level}`  |  👥 Участников: `{clan_member_count}`"
-            )
-            if clan_position:
-                clan_info += f"\n🏅 Позиция в топе: `#{clan_position}`"
-
+        
+        if banner_url:
             components.append(
-                ui.Section(
-                    ui.TextDisplay(content=clan_info),
-                    accessory=ui.Button(
-                        label="➡️ Перейти в клан",
-                        custom_id=f"clan_go_{clan_id}",
-                        style=disnake.ButtonStyle.success,
-                        emoji="<a:zzz_red_arrow_animated:1537916823029157939>"
-                    )
+                ui.MediaGallery(
+                    disnake.MediaGalleryItem(media=banner_url)
                 )
             )
-        else:
-            components.append(
-                ui.TextDisplay(content="❌ Не состоит в клане")
-            )
-
-        if active_path:
-            try:
-                attached_file = disnake.File(active_path, filename=filename_banner)
-                components.append(
-                    ui.MediaGallery(
-                        disnake.MediaGalleryItem(media=f"attachment://{filename_banner}")
-                    )
-                )
-            except Exception as e:
-                logger.error(f"Ошибка чтения локального баннера: {e}")
-
-        if user.id == current_user_id:
-            components.append(
-                ui.TextDisplay(
-                    content=(
-                        "\n✏ *Изменить профиль:* используйте команду `i.profile-edit`\n"
-                        "с параметрами `описание` и `#цвет`, а баннер приложите файлом."
-                    )
-                )
-            )
-
+        
+        # Ряд 1 - первые 5 категорий
+        row1 = ui.ActionRow()
+        row1.add_button(
+            label="🏠 Главные",
+            custom_id="help_cat_main",
+            style=disnake.ButtonStyle.success
+        )
+        row1.add_button(
+            label="📊 Ранги",
+            custom_id="help_cat_ranks",
+            style=disnake.ButtonStyle.primary
+        )
+        row1.add_button(
+            label="🛡️ Модерация",
+            custom_id="help_cat_mod",
+            style=disnake.ButtonStyle.danger
+        )
+        row1.add_button(
+            label="🏰 Кланы",
+            custom_id="help_cat_clans",
+            style=disnake.ButtonStyle.blurple
+        )
+        row1.add_button(
+            label="💖 Романтика",
+            custom_id="help_cat_love",
+            style=disnake.ButtonStyle.secondary
+        )
+        components.append(row1)
+        
+        # Ряд 2 - оставшиеся 2 категории + закрыть
+        row2 = ui.ActionRow()
+        row2.add_button(
+            label="🎮 Развлечения",
+            custom_id="help_cat_ent",
+            style=disnake.ButtonStyle.primary
+        )
+        row2.add_button(
+            label="🎙️ Голосовые",
+            custom_id="help_cat_voice",
+            style=disnake.ButtonStyle.blurple
+        )
+        row2.add_button(
+            label="❌ Закрыть",
+            custom_id="help_close",
+            style=disnake.ButtonStyle.danger
+        )
+        components.append(row2)
+        
         container = ui.Container(
             *components,
             accent_colour=disnake.Colour.from_rgb(255, 105, 180)
         )
-
-        return container, attached_file
-
-    @commands.command(name="profile-edit")
-    async def txt_profile_edit(self, ctx: commands.Context, *, args: str = None):
-        if not await check_command_permission(ctx, "profile-edit"):
-            return await ctx.send("⛔ У вас нет прав на изменение профиля.")
-
-        logger.info(f"profile-edit вызвана с args: {args}")
-        if not args and not ctx.message.attachments:
-            return await ctx.send("❌ Укажите хотя бы один параметр: описание, цвет, прикрепите файл с баннером или 'remove' для удаления баннера.")
-
-        if args and args.strip().lower() == "remove":
-            banner_action = "remove"
-            about = None
-            hex_color = None
+        
+        if banner_file:
+            await inter.response.edit_message(components=[container], attachments=[banner_file])
         else:
-            parts = args.split() if args else []
-            hex_color = None
-            about_parts = []
-            for part in reversed(parts):
-                if part.startswith("#") and len(part) in (4, 7) and all(c in "0123456789ABCDEFabcdef" for c in part[1:]):
-                    hex_color = part
-                    break
-                else:
-                    about_parts.insert(0, part)
-            about = " ".join(about_parts) if about_parts else None
-            banner_action = None
+            await inter.response.edit_message(components=[container])
 
-        logger.info(f"Парсинг: about={about}, hex_color={hex_color}, banner_action={banner_action}")
-
-        if hex_color:
-            if not hex_color.startswith("#"):
-                hex_color = "#" + hex_color
-            try:
-                int(hex_color.lstrip("#"), 16)
-            except ValueError:
-                return await ctx.send("❌ Неверный формат HEX-цвета. Используйте #RRGGBB или RRGGBB.")
-
-        async with self.bot.db.execute(
-            "SELECT embed_color, status_text, banner_url FROM profiles WHERE user_id = ?",
-            (ctx.author.id,)
-        ) as cursor:
-            row = await cursor.fetchone()
-        current_color, current_status, current_banner = row if row else ("#7289da", "Участник сервера", "")
-        logger.info(f"Текущие: цвет={current_color}, статус={current_status}, баннер={current_banner}")
-
-        final_color = hex_color if hex_color else current_color
-        final_about = about if about else current_status
-        final_banner = current_banner
-
-        if banner_action == "remove":
-            for ext in ["png", "gif", "jpg", "jpeg"]:
-                old_path = os.path.join(BANNERS_DIR, f"{ctx.author.id}.{ext}")
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-            logger.info(f"Баннер удалён для {ctx.author.id}")
-            final_banner = ""
-        elif ctx.message.attachments:
-            attachment = ctx.message.attachments[0]
-            if not attachment.content_type or not attachment.content_type.startswith("image/"):
-                return await ctx.send("❌ Прикреплённый файл не является изображением.")
-            is_gif = "gif" in attachment.content_type or attachment.filename.lower().endswith(".gif")
-            file_ext = "gif" if is_gif else "png"
-            for ext in ["png", "gif", "jpg", "jpeg"]:
-                old_path = os.path.join(BANNERS_DIR, f"{ctx.author.id}.{ext}")
-                if os.path.exists(old_path):
-                    os.remove(old_path)
-            banner_path = os.path.join(BANNERS_DIR, f"{ctx.author.id}.{file_ext}")
-            await attachment.save(banner_path)
-            logger.info(f"Баннер сохранён с расширением {file_ext} для {ctx.author.id}")
-            final_banner = ""
-
-        logger.info(f"Итоговые: цвет={final_color}, статус={final_about}, баннер={final_banner}")
-
-        await self.bot.db.execute("""
-            INSERT INTO profiles (user_id, embed_color, status_text, banner_url)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET embed_color=excluded.embed_color,
-            status_text=excluded.status_text, banner_url=excluded.banner_url
-        """, (ctx.author.id, final_color, final_about, final_banner))
-
-        await self.bot.db.execute("INSERT OR IGNORE INTO levels (user_id, xp, voice_xp) VALUES (?, 0, 0)", (ctx.author.id,))
-        await self.bot.db.commit()
-
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-
-        await ctx.send("✅ Ваш профиль обновлён!", delete_after=5)
-
-    @commands.command(name="lvl")
-    async def txt_lvl(self, ctx: commands.Context, member: disnake.Member = None):
-        target = member or ctx.author
-        async with self.bot.db.execute("SELECT xp, voice_xp FROM levels WHERE user_id = ?", (target.id,)) as cursor:
-            row = await cursor.fetchone()
-        txp = row[0] if row else 0
-        vxp = row[1] if row else 0
-        lvl, cxp, nxp = calculate_lvl_and_remaining(txp)
-        v_lvl, v_cxp, v_nxp = calculate_lvl_and_remaining(vxp)
-        def make_bar(current, needed):
-            slices = 10
-            filled = int((current / max(1, needed)) * slices)
-            filled = max(0, min(slices, filled))
-            return "🟩" * filled + "⬜" * (slices - filled)
-        text_bar = make_bar(cxp, nxp)
-        voice_bar = make_bar(v_cxp, v_nxp)
-        embed = disnake.Embed(color=disnake.Color.gold())
-        embed.set_thumbnail(url=target.display_avatar.url)
-        embed.description = (
-            "‿︵‿︵‿︵‿︵‿୨♡୧‿︵‿︵‿︵‿︵‿\n\n"
-            f"⭐ **РАНГОВАЯ КАРТОЧКА УЧАСТНИКА: {target.name}**\n\n"
-            f"💬 **Текстовый уровень: `{lvl}`**\n"
-            f"Прогресс: `{cxp} / {nxp}` XP\n"
-            f"|{text_bar}|\n\n"
-            f"🎙️ **Голосовой уровень: `{v_lvl}`**\n"
-            f"Прогресс: `{v_cxp} / {v_nxp}` XP\n"
-            f"|{voice_bar}|\n\n"
-            f"🏆 *Суммарный набранный опыт: `{txp + vxp}` XP.*"
-        )
-        await ctx.send(embed=embed)
-
-    @commands.command(name="top")
-    async def txt_top(self, ctx: commands.Context):
-        view = TopLeaderboardView(self.bot, ctx.author.id, ctx.guild, sort_type="total", page=0)
-        embed = await view.update_top_message(ctx)
-        await ctx.send(embed=embed, view=view)
-
-    @commands.command(name="lvl-set")
-    async def txt_lvl_set(self, ctx: commands.Context, member: disnake.Member, level: int, xp_type: str = "text"):
-        if not await check_is_moderator(ctx.author, self.bot):
-            return await ctx.send("⛔ У вас нет прав модератора для использования этой команды.")
-        if level <= 0:
-            return await ctx.send("❌ Уровень должен быть больше 0.")
-        total_xp = 0
-        for lvl in range(1, level):
-            total_xp += lvl * 100
-        if xp_type.lower() == "voice":
-            await self.bot.db.execute("INSERT INTO levels (user_id, voice_xp) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET voice_xp = ?", (member.id, total_xp, total_xp))
-            type_label = "голосовой"
-        else:
-            await self.bot.db.execute("INSERT INTO levels (user_id, xp) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET xp = ?", (member.id, total_xp, total_xp))
-            type_label = "текстовый"
-        await self.bot.db.commit()
-        await ctx.send(f"✅ Успешно установлен **{type_label}** уровень `{level}` для пользователя {member.mention}!")
-
-    @commands.command(name="xp-add")
-    async def txt_xp_add(self, ctx: commands.Context, member: disnake.Member, xp_amount: int, xp_type: str = "text"):
-        if not await check_is_moderator(ctx.author, self.bot):
-            return await ctx.send("⛔ У вас нет прав модератора для использования этой команды.")
-        if xp_amount <= 0:
-            return await ctx.send("❌ Количество XP должно быть положительным.")
-        if xp_type.lower() == "voice":
-            await self.bot.db.execute("INSERT INTO levels (user_id, voice_xp) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET voice_xp = voice_xp + ?", (member.id, xp_amount, xp_amount))
-            type_label = "голосового"
-        else:
-            await self.bot.db.execute("INSERT INTO levels (user_id, xp) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET xp = xp + ?", (member.id, xp_amount, xp_amount))
-            type_label = "текстового"
-        await self.bot.db.commit()
-        await ctx.send(f"✅ Успешно добавлено `{xp_amount}` XP {type_label} опыта пользователю {member.mention}!")
-
-    @commands.command(name="modrole_set")
-    async def txt_modrole_set(self, ctx: commands.Context, role: disnake.Role):
-        if not ctx.author.guild_permissions.administrator:
-            return await ctx.send("⛔ Только Администратор.")
-        await self.bot.set_config("mod_role_id", str(role.id))
-        await ctx.send(f"✅ Установлена: {role.mention}")
 
 class ModCategoryControlViewOld(PrivateView):
     def __init__(self, bot: "RoleBot", author_id: int):
@@ -3265,6 +3241,211 @@ class VoiceXPTracker:
             await self.bot.add_clan_xp(clan_id, xp_to_add, user_id)
         await self.bot.db.commit()
         logger.info(f"Пользователю {user_id} начислено {xp_to_add} войс-опыта за {minutes} мин. в канале.")
+
+
+
+# ==================== HELP VIEWS ====================
+
+class HelpView(PrivateView):
+    def __init__(self, bot: "RoleBot", author_id: int):
+        super().__init__(author_id=author_id, timeout=300)
+        self.bot = bot
+        
+        # Кнопки категорий - распределяем по рядам (максимум 5 в ряду)
+        categories = [
+            # Ряд 0 (первые 5 кнопок)
+            ("🏠 Главные", "help_cat_main", disnake.ButtonStyle.success, 0),
+            ("📊 Ранги", "help_cat_ranks", disnake.ButtonStyle.primary, 0),
+            ("🛡️ Модерация", "help_cat_mod", disnake.ButtonStyle.danger, 0),
+            ("🏰 Кланы", "help_cat_clans", disnake.ButtonStyle.blurple, 0),
+            ("💖 Романтика", "help_cat_love", disnake.ButtonStyle.secondary, 0),
+            # Ряд 1 (оставшиеся 2 кнопки)
+            ("🎮 Развлечения", "help_cat_ent", disnake.ButtonStyle.primary, 1),
+            ("🎙️ Голосовые", "help_cat_voice", disnake.ButtonStyle.blurple, 1),
+        ]
+        
+        for label, custom_id, style, row in categories:
+            self.add_item(HelpCategoryButton(
+                label=label,
+                custom_id=custom_id,
+                style=style,
+                row=row
+            ))
+        
+        # Кнопка закрытия - ряд 2
+        self.add_item(HelpCloseButton(row=2))
+
+class HelpCategoryButton(disnake.ui.Button):
+    def __init__(self, label: str, custom_id: str, style: disnake.ButtonStyle, row: int = 0):
+        super().__init__(
+            label=label,
+            custom_id=custom_id,
+            style=style,
+            row=row
+        )
+    
+    async def callback(self, interaction: disnake.MessageInteraction):
+        # Категории команд
+        help_categories = {
+            "help_cat_main": {
+                "name": "🏠 ГЛАВНЫЕ",
+                "commands": [
+                    ("🔄", "i.hub", "Открыть центральный хаб"),
+                    ("📖", "i.help", "Эта справка"),
+                    ("👤", "i.profile [@user]", "Показать профиль"),
+                    ("✏️", "i.profile-edit", "Изменить профиль"),
+                ]
+            },
+            "help_cat_ranks": {
+                "name": "📊 РАНГИ",
+                "commands": [
+                    ("⭐", "i.lvl [@user]", "Мой уровень"),
+                    ("🏆", "i.top", "Топ сервера"),
+                ]
+            },
+            "help_cat_mod": {
+                "name": "🛡️ МОДЕРАЦИЯ",
+                "commands": [
+                    ("🔧", "i.modrole_set", "Установить роль модера"),
+                    ("⬆️", "i.lvl-set", "Установить уровень"),
+                    ("➕", "i.xp-add", "Добавить опыт"),
+                ]
+            },
+            "help_cat_clans": {
+                "name": "🏰 КЛАНЫ",
+                "commands": [
+                    ("📩", "i.req", "Подать заявку"),
+                    ("✅", "i.accept", "Принять заявку"),
+                    ("❌", "i.decline", "Отклонить заявку"),
+                    ("📨", "i.invite", "Пригласить"),
+                    ("💰", "i.clan-money-set", "Установить монеты"),
+                    ("➕", "i.clan-money-add", "Добавить монеты"),
+                ]
+            },
+            "help_cat_love": {
+                "name": "💖 РОМАНТИКА",
+                "commands": [
+                    ("💍", "i.marry", "Жениться"),
+                    ("💔", "i.divorce", "Развестись"),
+                    ("💞", "i.love-profile", "Профиль пары"),
+                    ("💬", "i.love-status", "Статус любви"),
+                    ("🤗", "i.hug", "Обнять"),
+                    ("😘", "i.kiss", "Поцеловать"),
+                ]
+            },
+            "help_cat_ent": {
+                "name": "🎮 РАЗВЛЕЧЕНИЯ",
+                "commands": [
+                    ("🎭", "i.clone-emoji", "Клонировать эмодзи"),
+                    ("🌳", "i.family", "Семейное древо"),
+                ]
+            },
+            "help_cat_voice": {
+                "name": "🎙️ ГОЛОСОВЫЕ КАНАЛЫ",
+                "commands": [
+                    ("🔗", "i.voice-link", "Привязать канал"),
+                    ("🔓", "i.voice-unlink", "Отвязать канал"),
+                    ("🏠", "i.room-name", "Название комнаты"),
+                    ("👥", "i.room-limit", "Лимит канала"),
+                    ("🔑", "i.room-access", "Доступ к комнате"),
+                ]
+            }
+        }
+        
+        category_data = help_categories.get(self.custom_id)
+        if not category_data:
+            return await interaction.response.send_message("❌ Категория не найдена.", ephemeral=True)
+        
+        # Создаём embed для категории
+        embed = disnake.Embed(
+            title=f"📂 {category_data['name']}",
+            description="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            color=disnake.Color.from_rgb(100, 149, 237)
+        )
+        
+        # Добавляем команды
+        commands_text = ""
+        for emoji, command, description in category_data['commands']:
+            commands_text += f"{emoji} **{command}**\n└─ {description}\n\n"
+        
+        embed.description += f"\n{commands_text}"
+        embed.set_footer(
+            text="💡 Нажмите «Назад» для возврата в главное меню",
+            icon_url=interaction.guild.icon.url if interaction.guild and interaction.guild.icon else None
+        )
+        
+        # Создаём View с кнопкой назад
+        view = HelpBackView(interaction.bot, interaction.user.id)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+class HelpCloseButton(disnake.ui.Button):
+    def __init__(self, row: int = 1):
+        super().__init__(
+            label="Закрыть",
+            style=disnake.ButtonStyle.danger,
+            emoji="❌",
+            row=row
+        )
+    
+    async def callback(self, interaction: disnake.MessageInteraction):
+        await interaction.response.edit_message(
+            content="❌ Меню помощи закрыто.",
+            embed=None,
+            view=None
+        )
+
+class HelpBackView(PrivateView):
+    def __init__(self, bot: "RoleBot", author_id: int):
+        super().__init__(author_id=author_id, timeout=300)
+        self.bot = bot
+        
+        self.add_item(HelpBackButton())
+        self.add_item(HelpCloseButton(row=1))
+
+class HelpBackButton(disnake.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label="Назад",
+            style=disnake.ButtonStyle.secondary,
+            emoji="⬅️"
+        )
+    
+    async def callback(self, interaction: disnake.MessageInteraction):
+        # Возвращаем главное меню
+        banner_path = os.path.join(BANNERS_DIR, "banner.png")
+        banner_file = None
+        banner_url = None
+        
+        if os.path.exists(banner_path):
+            banner_file = disnake.File(banner_path, filename="banner.png")
+            banner_url = "attachment://banner.png"
+        
+        embed = disnake.Embed(
+            title="<a:zzz_voskl:1530628292342972536> **ЦЕНТР ПОМОЩИ**",
+            description=(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "<a:imsv_BongoCat:1258500185089249411> **Добро пожаловать в центр помощи!**\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "📌 **Выберите категорию ниже:**\n"
+                "Нажмите на кнопку с нужным разделом,\n"
+                "чтобы увидеть список доступных команд.\n\n"
+                "💡 **Совет:** Используйте `i.hub` для быстрого\n"
+                "доступа к основному функционалу бота.\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            ),
+            color=disnake.Color.from_rgb(255, 105, 180)
+        )
+        
+        if banner_url:
+            embed.set_image(url=banner_url)
+        
+        view = HelpView(interaction.bot, interaction.user.id)
+        
+        if banner_file:
+            await interaction.response.edit_message(embed=embed, attachments=[banner_file], view=view)
+        else:
+            await interaction.response.edit_message(embed=embed, view=view)
+
 
 # ==================== ОСНОВНОЙ КЛАСС БОТА ====================
 class RoleBot(commands.Bot):
